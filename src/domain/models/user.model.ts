@@ -7,12 +7,9 @@ export interface IUser extends Document {
   username: string;
   email: string;
   password: string;
-  firstName: string;
-  lastName: string;
   avatar?: string;
   bio?: string;
   isVerified: boolean;
-  lastLogin?: Date;
   createdAt: Date;
   updatedAt: Date;
   matchPassword(enteredPassword: string): Promise<boolean>;
@@ -41,18 +38,6 @@ const userSchema = new Schema<IUser>({
     required: [true, 'Please add a password'],
     minlength: [6, 'Password must be at least 6 characters'],
     select: false,
-  },
-  firstName: {
-    type: String,
-    required: [true, 'Please add a first name'],
-    trim: true,
-    maxlength: [50, 'First name cannot be more than 50 characters'],
-  },
-  lastName: {
-    type: String,
-    required: [true, 'Please add a last name'],
-    trim: true,
-    maxlength: [50, 'Last name cannot be more than 50 characters'],
   },
   avatar: {
     type: String,

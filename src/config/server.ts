@@ -1,7 +1,8 @@
 import express from 'express'; 
 import http, { Server as HttpServer } from 'http';
 import { connectToDatabase, disconnectFromDatabase } from '@/infrastructure';
-import { initSocketIO } from './socket';
+import { appRouter } from '@/interface/routers';
+import { initSocketIO } from '@/config';
 export type AppConfig = {
   port?: number | string;
 };
@@ -14,6 +15,7 @@ export class Server {
     this.config = config;
     this.app = express();
     this.app.use(express.json());
+      this.app.use('/api', appRouter);     
     this.setupGracefulShutdown();
   }
   async start() {

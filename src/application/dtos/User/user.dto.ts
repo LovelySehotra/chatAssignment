@@ -6,11 +6,6 @@ import {
   MaxLength,
   IsOptional,
   IsIn,
-  IsBoolean,
-  IsDate,
-  IsUrl,
-  ValidateNested,
-  IsObject,
 } from "class-validator";
 import { Type, Transform, Exclude } from "class-transformer";
 
@@ -32,25 +27,9 @@ export class CreateUserDto {
   @IsNotEmpty()
   @MinLength(6, { message: "Password must be at least 6 characters" })
   password!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(50, { message: "First name cannot be more than 50 characters" })
-  @Transform(({ value }) => value?.trim())
-  firstName!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(50, { message: "Last name cannot be more than 50 characters" })
-  @Transform(({ value }) => value?.trim())
-  lastName!: string;
-
-
-
   @IsOptional()
   @IsString()
   avatar?: string;
-
   @IsOptional()
   @IsString()
   @MaxLength(500, { message: "Bio cannot be more than 500 characters" })
@@ -64,24 +43,9 @@ export class UpdateUserDto {
   @MaxLength(50, { message: "Username cannot be more than 50 characters" })
   @Transform(({ value }) => value?.trim())
   username?: string;
-
   @IsOptional()
   @IsEmail({}, { message: "Please provide a valid email" })
   email?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(50, { message: "First name cannot be more than 50 characters" })
-  @Transform(({ value }) => value?.trim())
-  firstName?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(50, { message: "Last name cannot be more than 50 characters" })
-  @Transform(({ value }) => value?.trim())
-  lastName?: string;
-
-
   @IsOptional()
   @IsString()
   avatar?: string;
@@ -95,9 +59,9 @@ export class UpdateUserDto {
 
 // Login DTO
 export class LoginDto {
-  @IsString()
+  @IsEmail({}, { message: "Please provide a valid email" })
   @IsNotEmpty()
-  usernameOrEmail!: string;
+  email!: string
 
   @IsString()
   @IsNotEmpty()
@@ -148,37 +112,23 @@ export class VerifyEmailDto {
 export class UserResponseDto {
   @Type(() => String)
   _id!: string;
-
+  @IsString()
   username!: string;
+  @IsEmail()
   email!: string;
-  firstName!: string;
-  lastName!: string;
-
+  @IsOptional()
+  @IsString()
   avatar?: string;
+  @IsOptional()
+  @IsString()
   bio?: string;
-  isVerified!: boolean;
-
-  @Type(() => Date)
-  lastLogin?: Date;
-
   @Type(() => Date)
   createdAt!: Date;
-
   @Type(() => Date)
   updatedAt!: Date;
-
   // Exclude sensitive fields
   @Exclude()
   password?: string;
-
-  @Exclude()
-  verificationToken?: string;
-
-  @Exclude()
-  resetPasswordToken?: string;
-
-  @Exclude()
-  resetPasswordExpire?: Date;
 }
 
 // Query/Filter DTOs
@@ -186,9 +136,6 @@ export class GetUsersQueryDto {
   @IsOptional()
   @IsString()
   search?: string;
-
-
-
   @IsOptional()
   @IsString()
   @Transform(({ value }) => parseInt(value, 10))
@@ -206,8 +153,6 @@ export class GetUsersQueryDto {
     "updatedAt",
     "username",
     "email",
-    "firstName",
-    "lastName",
   ])
   sortBy?: string = "createdAt";
 
