@@ -1,43 +1,88 @@
 import { Router } from 'express';
+
 import { User } from '@/domain/models';
-import { AuthService, JwtService } from '@/application/services';
-import { UserController } from '../controllers/user.controller';
+
+import {
+  AuthService,
+  JwtService,
+  UserService,
+} from '@/application/services';
+
+import {
+  CreateUserDto,
+  LoginDto,
+  UpdateUserDto,
+  UserResponseDto,
+} from '@/application/dtos';
+
 import { RepositoryFactory } from '@/infrastructure';
-import { UseRequestDto, UseResponseDto } from '../middleware/dtos/validation';
-import { CreateUserDto, LoginDto, UpdateUserDto, UserResponseDto } from '@/application/dtos';
+
+import { UserController } from '../controllers/user.controller';
+
+import {
+  UseRequestDto,
+  UseResponseDto,
+} from '../middleware/dtos/validation';
+
 import { IsAuthenticated } from '../middleware/auth/authGuard';
 
-const userRepository = RepositoryFactory.createFull(User)
-const authService = new AuthService(new JwtService(), userRepository);
-const userController = new UserController(authService);
 const router = Router();
+// Dependencies
 
+const userRepository = RepositoryFactory.createFull(User);
 
-// User registration
-router
-    .route('/')
-    .post(
-        UseRequestDto(CreateUserDto),
-        UseResponseDto(UserResponseDto),
-        userController.signupUser
-    );
-// User login
-router
-    .route('/login')
-    .post(
+const jwtService = new JwtService();
 
-        UseRequestDto(LoginDto),
-        UseResponseDto(UserResponseDto),
-        userController.loginUser
-    );
+const userService = new UserService(userRepository);
 
-// User update (requires authentication)
-router.route('/').patch(
-    IsAuthenticated,
-    UseRequestDto(UpdateUserDto),
-    UseResponseDto(UserResponseDto),
-    userController.updateUser
+const authService = new AuthService(
+  jwtService,
+  userRepository,
 );
 
+const userController = new UserController(
+  authService,
+  userService,
+);
 
+// Public
+
+router.post(
+  '/',
+  UseRequestDto(CreateUserDto),
+  UseResponseDto(UserResponseDto),
+  userController.signupUser,
+);
+
+router.post(
+  '/login',
+  UseRequestDto(LoginDto),
+  UseResponseDto(UserResponseDto),
+  userController.loginUser,
+);
+
+// Protected
+
+router.use(IsAuthenticated);
+
+router.get(
+  '/me',
+  UseResponseDto(UserResponseDto),
+  userController.getCurrentUser,
+);
+router.get(
+  '/',
+  UseResponseDto(UserResponseDto),
+  userController.getAllUsers,
+);
+router.patch(
+  '/',
+  UseRequestDto(UpdateUserDto),
+  UseResponseDto(UserResponseDto),
+  userController.updateUser,
+);
+router.delete(
+  '/',
+  userController.deleteUser,
+);
 export default router;

@@ -122,6 +122,10 @@ export class UserResponseDto {
   avatar?: string;
   @Expose()
   createdAt!: Date;
+  @Expose()
+  accessToken?: string;
+  @Expose()
+  refreshToken?: string;
 }
 // Query/Filter DTOs
 export class GetUsersQueryDto {

@@ -20,10 +20,15 @@ export class AuthService {
     const newUser = await this.userRepository.create({
       ...userData,
     });
+    const accessToken = this.jwtService.createAccessToken(newUser._id.toString());
+    const refreshToken = this.jwtService.createRefreshToken(newUser._id.toString());
+
     return {
       ...newUser,
       _id: newUser._id.toString(),
       createdAt: newUser.createdAt,
+      accessToken,
+      refreshToken,
     };
   }
   async login(loginCredentials: LoginDto): Promise<UserResponseDto> {
@@ -41,7 +46,9 @@ export class AuthService {
     if (!user) throw new AppError('User not found', 404);
     if (password && !(await bcrypt.compare(password, user.password)))
       throw new AppError('Invalid credentials', 404);
-    return { ...user, _id: user._id.toString(), };
+    const accessToken = this.jwtService.createAccessToken(user._id.toString());
+    const refreshToken = this.jwtService.createRefreshToken(user._id.toString());
+    return { ...user, _id: user._id.toString(), accessToken, refreshToken };
   }
   async refreshAccessToken(refreshToken: string): Promise<string> {
     const newAccessToken =
@@ -59,6 +66,7 @@ export class AuthService {
       ...updatedUser,
       _id: updatedUser._id.toString(),
       createdAt: updatedUser.createdAt,
+
     };
   }
 }
