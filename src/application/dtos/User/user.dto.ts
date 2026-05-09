@@ -6,26 +6,33 @@ import {
   MaxLength,
   IsOptional,
   IsIn,
+  Matches,
+  IsDate,
 } from "class-validator";
-import { Type, Transform, Exclude } from "class-transformer";
+import { Type, Transform, Exclude, Expose } from "class-transformer";
 
 
 
 // Create User DTO
 export class CreateUserDto {
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(50, { message: "Username cannot be more than 50 characters" })
-  @Transform(({ value }) => value?.trim())
-  username!: string;
 
-  @IsEmail({}, { message: "Please provide a valid email" })
-  @IsNotEmpty()
+  @IsEmail({}, { message: 'Please provide a valid email' })
+  @IsNotEmpty({ message: 'Email is required' })
+  @MaxLength(255)
+  @Transform(({ value }) => value?.toLowerCase?.())
   email!: string;
 
   @IsString()
-  @IsNotEmpty()
-  @MinLength(6, { message: "Password must be at least 6 characters" })
+  @IsNotEmpty({ message: 'Password is required' })
+  @MinLength(8, { message: 'Password must be at least 8 characters long' })
+  @MaxLength(100)
+  @Matches(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+    {
+      message:
+        'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
+    },
+  )
   password!: string;
   @IsOptional()
   @IsString()
@@ -44,12 +51,8 @@ export class UpdateUserDto {
   @Transform(({ value }) => value?.trim())
   username?: string;
   @IsOptional()
-  @IsEmail({}, { message: "Please provide a valid email" })
-  email?: string;
-  @IsOptional()
   @IsString()
   avatar?: string;
-
   @IsOptional()
   @IsString()
   @MaxLength(500, { message: "Bio cannot be more than 500 characters" })
@@ -110,27 +113,16 @@ export class VerifyEmailDto {
 
 // User Response DTO (for API responses - excludes sensitive data)
 export class UserResponseDto {
-  @Type(() => String)
+  @Expose()
+  @Transform(({ value }) => value?.toString?.() ?? value)
   _id!: string;
-  @IsString()
-  username!: string;
-  @IsEmail()
+  @Expose()
   email!: string;
-  @IsOptional()
-  @IsString()
+  @Expose()
   avatar?: string;
-  @IsOptional()
-  @IsString()
-  bio?: string;
-  @Type(() => Date)
+  @Expose()
   createdAt!: Date;
-  @Type(() => Date)
-  updatedAt!: Date;
-  // Exclude sensitive fields
-  @Exclude()
-  password?: string;
 }
-
 // Query/Filter DTOs
 export class GetUsersQueryDto {
   @IsOptional()

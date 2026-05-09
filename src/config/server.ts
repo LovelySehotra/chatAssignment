@@ -1,8 +1,12 @@
-import express from 'express'; 
+import express from 'express';
 import http, { Server as HttpServer } from 'http';
+import cors from 'cors';
 import { connectToDatabase, disconnectFromDatabase } from '@/infrastructure';
 import { appRouter } from '@/interface/routers';
 import { initSocketIO } from '@/config';
+import { errorHandler } from '@/interface/middleware/error/error';
+import { userDeserializer } from '@/interface/middleware/auth/userDeserialiser';
+import { corsConfig } from '@/interface/middleware/cors/cors';
 export type AppConfig = {
   port?: number | string;
 };
@@ -14,8 +18,12 @@ export class Server {
   constructor(config: AppConfig) {
     this.config = config;
     this.app = express();
-    this.app.use(express.json());
-      this.app.use('/api', appRouter);     
+    this.app.use(express.json({ limit: '5mb' }));
+    this.app.use(express.urlencoded({ extended: true, limit: '5mb' }));
+    this.app.use(cors(corsConfig))
+    this.app.use(userDeserializer)
+    this.app.use('/api', appRouter);
+    this.app.use(errorHandler);
     this.setupGracefulShutdown();
   }
   async start() {
@@ -55,7 +63,7 @@ export class Server {
             resolve();
           } catch (dbError) {
             console.error('Error disconnecting from database:', dbError);
-            resolve(); 
+            resolve();
           }
         });
       } else {

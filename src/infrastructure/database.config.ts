@@ -10,7 +10,7 @@ export const connectToDatabase = async () => {
 
     };
 
-    const connectionString = DATABASE_URL || 'mongodb://127.0.0.1:27017/lms';
+    const connectionString = DATABASE_URL || 'mongodb://127.0.0.1:27017/chat';
 
     if (!connectionString) {
       throw new Error('DATABASE_URL is not defined in environment variables');
