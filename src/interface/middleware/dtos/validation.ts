@@ -1,9 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { instanceToPlain, plainToInstance, ClassConstructor } from 'class-transformer';
 import { validate } from 'class-validator';
+import { asyncHandler } from '@/utils/asyncHandler';
+import { ValidationError } from '../error/error';
 
 export const UseRequestDto = (dto: any) => {
-  return async (
+  return asyncHandler(async (
     req: Request,
     res: Response,
     next: NextFunction,
@@ -21,22 +23,19 @@ export const UseRequestDto = (dto: any) => {
     });
 
     if (validationErrors?.length > 0) {
-      return res.status(400).json({
-        error: {
-          code: 400,
-          errors: validationErrors.map(e => ({
-            field: e.property,
-            errors: Object.values(e.constraints || {}),
-          })),
-        },
-      });
+      throw new ValidationError(
+        validationErrors.map(e => ({
+          field: e.property,
+          errors: Object.values(e.constraints || {}),
+        }))
+      );
     }
 
     // Convert back to plain object for the service layer
     req.body = instanceToPlain(dtoInstance);
 
     return next();
-  };
+  });
 };
 
 /**

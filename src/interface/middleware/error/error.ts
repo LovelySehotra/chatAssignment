@@ -45,6 +45,14 @@ export class ConflictError extends AppError {
   }
 }
 
+export class ValidationError extends AppError {
+  errors: any[];
+  constructor(errors: any[], message = 'Validation Error') {
+    super(message, 400);
+    this.errors = errors;
+  }
+}
+
 // IMPORTANT: Error handler must have exactly 4 parameters (err, req, res, next)
 export const errorHandler = (
   err: any,
@@ -61,11 +69,17 @@ export const errorHandler = (
 
   // Handle known AppError types
   if (err instanceof AppError) {
-    return res.status(err.statusCode).json({
+    const response: any = {
       success: false,
       status: err.status,
       message: err.message,
-    });
+    };
+
+    if (err instanceof ValidationError) {
+      response.errors = err.errors;
+    }
+
+    return res.status(err.statusCode).json(response);
   }
 
   // Handle Mongoose validation errors

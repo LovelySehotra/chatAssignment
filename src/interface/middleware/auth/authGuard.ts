@@ -1,5 +1,6 @@
 import { IUser } from '@/domain/models';
 import { Request, Response, NextFunction } from 'express';
+import { UnauthorizedError } from '../error/error';
 
 // Extend Express Request interface to include 'user'
 declare global {
@@ -9,14 +10,12 @@ declare global {
     }
   }
 }
-
-export const PERMITTED_USER_TYPES = ['admin', 'staff'];
 export function IsAuthenticated(
   req: Request,
   res: Response,
   next: NextFunction,
 ) {
-  if (!req.user) throw new Error('401::Unauthenticated');
+  if (!req.user) throw new UnauthorizedError('Please log in to access this resource');
   return next();
 }
 
