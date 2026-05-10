@@ -39,3 +39,7 @@ export function initSocketIO(httpServer: HttpServer): IOServer {
 
   return io;
 }
+export function getSocketIO(): IOServer {
+  if (!io) throw new Error('Socket.IO not initialised. Call initSocketIO() first.');
+  return io;
+}

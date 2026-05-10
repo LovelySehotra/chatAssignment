@@ -15,6 +15,7 @@ import {
 import { Transform, Type, Expose } from 'class-transformer';
 import { ConversationType } from '@/domain/models';
 
+
 export class LastMessageDto {
   @IsString()
   @IsNotEmpty()

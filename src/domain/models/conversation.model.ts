@@ -1,5 +1,4 @@
 import mongoose, { Document, Schema } from 'mongoose';
-import { IUser } from './user.model';
 
 export type ConversationType = 'direct' | 'group';
 export interface IConversation extends Document {
@@ -44,7 +43,7 @@ const conversationSchema = new Schema<IConversation>(
       content: String,
       senderId: { type: Schema.Types.ObjectId, ref: 'User' },
       sentAt: Date,
-      default: null,
+
     },
     createdBy: {
       type: Schema.Types.ObjectId,
