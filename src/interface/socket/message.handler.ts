@@ -31,7 +31,7 @@ export const registerMessageHandlers = (io: Server, socket: Socket) => {
       const { conversationId, content } = sendMessageSchema.parse(payload);
       
       const message = await messageService.sendMessage(userId, conversationId, content);
-
+      console.log('Message sent:', message);
       // Broadcast to the conversation room (excluding sender)
       socket.to(conversationId).emit('receive_message', message);
 

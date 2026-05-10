@@ -1,22 +1,24 @@
 import { ConversationService } from "@/application/services/Socket/conversation.service";
 
 export class ConversationController {
-  private conversationService: ConversationService
+    private conversationService: ConversationService
     constructor(conversationService: ConversationService) {
         this.conversationService = conversationService;
     }
     createDirectConversation = async (req: any, res: any) => {
         const userId = req.user?._id;
         if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-        const { participantId } = req.body;
-        const conversation = await this.conversationService.createDirectConversation(String(userId), participantId);
+        const { type } = req.body;
+        if (type !== 'direct') return res.status(400).json({ message: 'Invalid conversation type' });
+        const conversation = await this.conversationService.createDirectConversation([String(userId), req.body.participantId]);
         return res.status(201).json(conversation);
     }
     createGroupConversation = async (req: any, res: any) => {
         const userId = req.user?._id;
         if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-        const { participantIds, name, description } = req.body;
-        const conversation = await this.conversationService.createGroupConversation(String(userId), participantIds, name, description);
+        const { participantIds, name, description, type } = req.body;
+        if (type !== 'group') return res.status(400).json({ message: 'Invalid conversation type' });
+        const conversation = await this.conversationService.createGroupConversation([String(userId), participantIds], name, description);
         return res.status(201).json(conversation);
     }
     getUserConversations = async (req: any, res: any) => {

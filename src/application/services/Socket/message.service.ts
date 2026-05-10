@@ -19,52 +19,58 @@ export class MessageService {
   // Save a new message and update the conversation's last message.
 
   async sendMessage(senderId: string, conversationId: string, content: string): Promise<IMessage> {
-    // Validate conversation exists
-    const conversation = await this.conversationRepository.findById(conversationId);
-    if (!conversation) {
-      throw new AppError('Conversation not found', 404);
-    }
+    try {
+      console.log("before creating message")
+      // Validate conversation exists
+      const conversation = await this.conversationRepository.findById(conversationId);
+      if (!conversation) {
+        throw new AppError('Conversation not found', 404);
+      }
 
-    // Verify sender is participant
-    const isParticipant = conversation.participants.some(
-      (p) => p.toString() === senderId
-    );
+      // Verify sender is participant
+      const isParticipant = conversation.participants.some(
+        (p) => p.toString() === senderId
+      );
 
-    if (!isParticipant) {
-      throw new AppError('User is not a participant in this conversation', 403);
-    }
+      if (!isParticipant) {
+        throw new AppError('User is not a participant in this conversation', 403);
+      }
 
-    // Create message
-    const message = await this.messageRepository.create({
-      conversationId: new mongoose.Types.ObjectId(conversationId),
-      senderId: new mongoose.Types.ObjectId(senderId),
-      content,
-      type: 'text',
-      readBy: [],
-    });
-
-    // Update conversation lastMessage
-    await this.conversationRepository.updateById(conversationId, {
-      lastMessage: {
-        content: content,
+      // Create message
+      const message = await this.messageRepository.create({
+        conversationId: new mongoose.Types.ObjectId(conversationId),
         senderId: new mongoose.Types.ObjectId(senderId),
-        sentAt: message.createdAt,
-      },
-    });
+        content,
+        type: 'text',
+        readBy: [],
+      });
+
+      // Update conversation lastMessage
+      await this.conversationRepository.updateById(conversationId, {
+        lastMessage: {
+          content: content,
+          senderId: new mongoose.Types.ObjectId(senderId),
+          sentAt: message.createdAt,
+        },
+      });
 
 
-    const populatedMessage = await this.messageRepository.findById(message.id, {
-      populate: {
-        path: 'sender',
-        select: '_id username email avatar',
-      },
-    });
+      const populatedMessage = await this.messageRepository.findById(message.id, {
+        populate: {
+          path: 'sender',
+          select: '_id username email avatar',
+        },
+      });
 
-    if (!populatedMessage) {
-      throw new AppError('Failed to populate message', 500);
+      if (!populatedMessage) {
+        throw new AppError('Failed to populate message', 500);
+      }
+
+      return populatedMessage;
+    } catch (error: any) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(error.message || 'Failed to send message', 500);
     }
-
-    return populatedMessage;
   }
 
 
@@ -72,31 +78,36 @@ export class MessageService {
 
 
   async markAsRead(conversationId: string, messageId: string, currentUserId: string): Promise<void> {
-    const conversation = await this.conversationRepository.findById(conversationId);
-    if (!conversation) {
-      throw new AppError('Conversation not found', 404);
-    }
+    try {
+      const conversation = await this.conversationRepository.findById(conversationId);
+      if (!conversation) {
+        throw new AppError('Conversation not found', 404);
+      }
 
-    // Ensure user is participant
-    const isParticipant = conversation.participants.some(
-      (p) => p.toString() === currentUserId
-    );
-    if (!isParticipant) {
-      throw new AppError('User is not a participant in this conversation', 403);
+      // Ensure user is participant
+      const isParticipant = conversation.participants.some(
+        (p) => p.toString() === currentUserId
+      );
+      if (!isParticipant) {
+        throw new AppError('User is not a participant in this conversation', 403);
+      }
+      const message = await this.messageRepository.findById(messageId);
+      if (!message) {
+        throw new AppError('Message not found', 404);
+      }
+      const alreadyRead = message.readBy.some(
+        (r) => r.userId.toString() === currentUserId
+      );
+      if (alreadyRead) {
+        return; // No action needed 
+      }
+      const readAt = new Date();
+      message.readBy.push({ userId: new mongoose.Types.ObjectId(currentUserId), readAt });
+      await message.save();
+      return;
+    } catch (error: any) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(error.message || 'Failed to mark message as read', 500);
     }
-    const message = await this.messageRepository.findById(messageId);
-    if (!message) {
-      throw new AppError('Message not found', 404);
-    }
-    const alreadyRead = message.readBy.some(
-      (r) => r.userId.toString() === currentUserId
-    );
-    if (alreadyRead) {
-      return; // No action needed 
-    }
-    const readAt = new Date();
-    message.readBy.push({ userId: new mongoose.Types.ObjectId(currentUserId), readAt });
-    await message.save();
-    return;
   }
 }

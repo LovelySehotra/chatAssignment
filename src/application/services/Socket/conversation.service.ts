@@ -7,26 +7,26 @@ export class ConversationService {
     constructor(conversationRepository: IRepository<IConversation>) {
         this.conversationRepository = conversationRepository;
     }
-    async createDirectConversation(userId: string, participantId: string): Promise<IConversation> {
+    async createDirectConversation(participantIds: string[]): Promise<IConversation> {
         // conversation already exists between these two users
         const existingConversation = await this.conversationRepository.findOne({
             type: 'direct',
-            participants: { $all: [userId, participantId], $size: 2 },
+            participants: { $all: participantIds, $size: 2 },
         });
         if (existingConversation) {
             return existingConversation;
         }
         const newConversation = await this.conversationRepository.create({
-            participants: [new mongoose.Types.ObjectId(userId), new mongoose.Types.ObjectId(participantId)],
+            participants: participantIds.map(id => new mongoose.Types.ObjectId(id)),
             lastMessage: null,
         });
         return newConversation;
 
     }
-    async createGroupConversation(userId: string, participantIds: string[], name?: string, description?: string): Promise<IConversation> {
+    async createGroupConversation( participantIds: string[], name?: string, description?: string): Promise<IConversation> {
         const newConversation = await this.conversationRepository.create({
             type: 'group',
-            participants: [new mongoose.Types.ObjectId(userId), ...participantIds.map(id => new mongoose.Types.ObjectId(id))],
+            participants: [...participantIds.map(id => new mongoose.Types.ObjectId(id))],
             name,
             description,
             lastMessage: null,
