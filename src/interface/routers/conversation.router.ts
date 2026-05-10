@@ -1,30 +1,44 @@
 import { Router } from "express";
-import { ConversationController } from "../controllers/conversatiom.controller";
+import { ConversationController } from "../controllers/conversation.controller";
 import { ConversationService } from "@/application/services/Socket/conversation.service";
 import { RepositoryFactory } from "@/infrastructure";
 import { Conversation } from "@/domain/models";
-import { UseRequestDto } from "../middleware/dtos/validation";
-import { CreateConversationDto } from "@/application/dtos/Socket/conversation.dto";
+import { UseRequestDto, UseResponseDto } from "../middleware/dtos/validation";
+import { ConversationResponseDto, CreateConversationDto } from "@/application/dtos/Socket/conversation.dto";
 import { IsAuthenticated } from "../middleware/auth/authGuard";
+import { asyncHandler } from "@/utils/asyncHandler";
 
 const router = Router();
-const conersationRepository = RepositoryFactory.createFull(Conversation);
-const conversationService = new ConversationService(conersationRepository);
+const conversationRepository = RepositoryFactory.createFull(Conversation);
+const conversationService = new ConversationService(conversationRepository);
 const conversationController = new ConversationController(conversationService);
 
 router.use(IsAuthenticated);
+
 router.post(
     '/direct',
     UseRequestDto(CreateConversationDto),
-    conversationController.createDirectConversation);
+
+    asyncHandler(conversationController.createDirectConversation)
+);
+
 router.post(
     '/group',
     UseRequestDto(CreateConversationDto),
-    conversationController.createGroupConversation);
+
+    asyncHandler(conversationController.createGroupConversation)
+);
+
 router.get(
     '/',
-    conversationController.getUserConversations);
+    UseResponseDto(ConversationResponseDto),
+    asyncHandler(conversationController.getUserConversations)
+);
+
 router.get(
     '/:conversationId',
-    conversationController.getConversationById);
+    UseResponseDto(ConversationResponseDto),
+    asyncHandler(conversationController.getConversationById)
+);
+
 export default router;
