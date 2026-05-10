@@ -1,3 +1,4 @@
+import { registerMessageHandlers } from '@/interface/socket/message.handler';
 import { Server as HttpServer } from 'http';
 import { Server as IOServer, Socket } from 'socket.io';
 
@@ -27,6 +28,7 @@ export function initSocketIO(httpServer: HttpServer): IOServer {
     console.log(
       `[Socket] connected socketId=${socket.id}`,
     );
+    registerMessageHandlers(io, socket);
 
     socket.on('disconnect', reason => {
       console.log(

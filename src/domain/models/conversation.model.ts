@@ -11,7 +11,7 @@ export interface IConversation extends Document {
     content: string;
     senderId: mongoose.Types.ObjectId;
     sentAt: Date;
-  };
+  }|null;
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -44,6 +44,7 @@ const conversationSchema = new Schema<IConversation>(
       content: String,
       senderId: { type: Schema.Types.ObjectId, ref: 'User' },
       sentAt: Date,
+      default: null,
     },
     createdBy: {
       type: Schema.Types.ObjectId,
