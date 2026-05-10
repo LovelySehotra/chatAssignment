@@ -6,6 +6,7 @@ import { RepositoryFactory } from "@/infrastructure/repository/GenericRepository
 import { IsAuthenticated } from "../middleware/auth/authGuard";
 import { UseRequestDto, UseResponseDto } from "../middleware/dtos/validation";
 import { CreateMessageDto, MessageResponseDto } from "@/application/dtos/Socket/message.dto";
+import { asyncHandler } from "@/utils/asyncHandler";
 
 const router = Router();
 
@@ -14,22 +15,29 @@ const conversationRepository = RepositoryFactory.createFull(Conversation);
 const messageService = new MessageService(messageRepository, conversationRepository);
 const messageController = new MessageController(messageService);
 
-router.use(IsAuthenticated); 
+router.use(IsAuthenticated);
+
 router.post(
     '/send',
     UseRequestDto(CreateMessageDto),
     UseResponseDto(MessageResponseDto),
-    messageController.sendMessage);
+    asyncHandler(messageController.sendMessage)
+);
+
 router.post(
     '/mark-read',
-    messageController.markAsRead);
+    asyncHandler(messageController.markAsRead)
+);
+
 router.get(
     '/:conversationId',
-    messageController.getMessagesByConversationId
+    UseResponseDto(MessageResponseDto),
+    asyncHandler(messageController.getMessagesByConversationId)
 );
+
 router.get(
     '/:conversationId/unread-count',
-    messageController.getUnreadMessagesCount
+    asyncHandler(messageController.getUnreadMessagesCount)
 );
 
 export default router;

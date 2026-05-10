@@ -3,6 +3,7 @@ import { MessageService } from '@/application/services/Socket';
 import { RepositoryFactory } from '@/infrastructure';
 import { Message, Conversation, IMessage, IConversation } from '@/domain/models';
 import { sendMessageSchema, markReadSchema } from '@/interface/middleware/dtos/socket.validation';
+import { socketAsyncHandler } from '@/utils/asyncHandler';
 
 // Initialize the message service
 const messageRepository = RepositoryFactory.createFull<IMessage>(Message);
@@ -26,45 +27,34 @@ export const registerMessageHandlers = (io: Server, socket: Socket) => {
   });
 
   // Handle sending a message
-  socket.on('send_message', async (payload: unknown, callback: (response: any) => void) => {
-    try {
-      const { conversationId, content } = sendMessageSchema.parse(payload);
-      
-      const message = await messageService.sendMessage(userId, conversationId, content);
-      console.log('Message sent:', message);
-      // Broadcast to the conversation room (excluding sender)
-      socket.to(conversationId).emit('receive_message', message);
+  socket.on('send_message', socketAsyncHandler(async (payload: any, callback: (response: any) => void) => {
+    const { conversationId, content } = sendMessageSchema.parse(payload);
+    
+    const message = await messageService.sendMessage(userId, conversationId, content);
+    console.log('Message sent:', message);
+    
+    // Broadcast to the conversation room (excluding sender)
+    socket.to(conversationId).emit('receive_message', message);
 
-      if (callback) {
-        callback({ status: 'success', data: message });
-      }
-    } catch (error: any) {
-      if (callback) {
-        callback({ status: 'error', error: error.message });
-      }
+    if (callback) {
+      callback({ status: 'success', data: message });
     }
-  });
+  }));
 
   // Handle marking messages in a conversation as read
-  socket.on('mark_read', async (payload: unknown, callback: (response: any) => void) => {
-    try {
-      const { conversationId,messageId } = markReadSchema.parse(payload);
-      
-      await messageService.markAsRead(conversationId, messageId,userId);
+  socket.on('mark_read', socketAsyncHandler(async (payload: any, callback: (response: any) => void) => {
+    const { conversationId, messageId } = markReadSchema.parse(payload);
+    
+    await messageService.markAsRead(conversationId, messageId, userId);
 
-      // Broadcast to other participants that messages were read
-      socket.to(conversationId).emit('messages_read', {
-        conversationId,
-        readBy: userId,
-      });
+    // Broadcast to other participants that messages were read
+    socket.to(conversationId).emit('messages_read', {
+      conversationId,
+      readBy: userId,
+    });
 
-      if (callback) {
-        callback({ status: 'success' });
-      }
-    } catch (error: any) {
-      if (callback) {
-        callback({ status: 'error', error: error.message });
-      }
+    if (callback) {
+      callback({ status: 'success' });
     }
-  });
+  }));
 };
