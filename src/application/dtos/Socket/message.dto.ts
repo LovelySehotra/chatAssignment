@@ -1,13 +1,10 @@
 import { Expose, Transform } from "class-transformer";
-import { IsString } from "class-validator";
+import { IsMongoId, IsString } from "class-validator";
 
 export class CreateMessageDto {
-    @IsString()
+    @IsMongoId()
+    @Transform(({ value }) => value?.trim())
     conversationId!: string;
-
-    @IsString()
-    senderId!: string;
-
     @IsString()
     content!: string;
 
@@ -16,7 +13,8 @@ export class LastMessageDto {
     @IsString()
     content!: string;
 
-    @IsString()
+    @IsMongoId()
+    @Transform(({ value }) => value?.trim())
     senderId!: string;
 
     @IsString()

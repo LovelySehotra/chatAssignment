@@ -3,14 +3,14 @@ import mongoose, { Document, Schema } from 'mongoose';
 export type ConversationType = 'direct' | 'group';
 export interface IConversation extends Document {
   type: ConversationType;
-  participants: mongoose.Types.ObjectId[];
+  participantIds: mongoose.Types.ObjectId[];
   name?: string;          // group conversations only
   description?: string;   // group conversations only
   lastMessage?: {
     content: string;
     senderId: mongoose.Types.ObjectId;
     sentAt: Date;
-  }|null;
+  } | null;
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -22,7 +22,7 @@ const conversationSchema = new Schema<IConversation>(
       enum: ['direct', 'group'],
       required: true,
     },
-    participants: [
+    participantIds: [
       {
         type: Schema.Types.ObjectId,
         ref: 'User',

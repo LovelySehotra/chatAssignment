@@ -132,17 +132,18 @@ export class MessageService {
       }
       console.log("Querying messages with:", query, "Limit:", limit);
 
-      const messages = await this.messageRepository.findMany({ conversationId }, {
+      const messages = await this.messageRepository.findMany(query, {
         sort: { _id: -1 },
         limit: limit + 1,
       });
       const nextCursor =
-        messages.length === query.limit
-          ? String(messages[0]._id) // oldest message in this page
+        messages.length > limit
+          ? String(messages[messages.length - 1]._id)
           : null;
+      if (messages.length > limit) messages.pop();
       return {
         data: messages,
-        pagination: { limit: query.limit, nextCursor },
+        pagination: { limit, nextCursor },
       };
     } catch (error: any) {
       if (error instanceof AppError) throw error;

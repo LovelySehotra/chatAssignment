@@ -4,6 +4,8 @@ import { Server as IOServer, Socket } from 'socket.io';
 
 
 
+import { JwtService } from '@/application/services/Auth/jwt.service';
+
 let io: IOServer;
 
 export function initSocketIO(httpServer: HttpServer): IOServer {
@@ -20,8 +22,20 @@ export function initSocketIO(httpServer: HttpServer): IOServer {
 
   io.engine.on('connection_error', err => {
     console.log('Socket connection error');
-
     console.log(err.message);
+  });
+
+  io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+    if (!token) return next(new Error('Authentication error'));
+    try {
+      const jwtService = new JwtService();
+      const payload = jwtService.decodeToken(token);
+      socket.data.userId = payload.userId;
+      return next();
+    } catch (err) {
+      return next(new Error('Authentication error'));
+    }
   });
 
   io.on('connection', async (socket: Socket) => {

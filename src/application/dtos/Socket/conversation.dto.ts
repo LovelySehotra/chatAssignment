@@ -13,7 +13,7 @@ import {
 } from 'class-validator';
 
 import { Transform, Type, Expose } from 'class-transformer';
-import { ConversationType } from '@/domain/models';
+import type { ConversationType } from '@/domain/models/conversation.model';
 
 
 export class LastMessageDto {
@@ -38,12 +38,12 @@ export class CreateConversationDto {
   type!: ConversationType;
 
   @IsArray()
-  @ArrayMinSize(2, {
-    message: 'Conversation must contain at least 2 participants',
-  })
+  // @ArrayMinSize(1, {
+  //   message: 'Conversation must contain at least 2 participants',
+  // })
   @ArrayUnique()
   @IsMongoId({ each: true })
-  participants!: string[];
+  participantIds!: string[];
 
   // Group only
   @IsOptional()
@@ -58,8 +58,6 @@ export class CreateConversationDto {
   @Transform(({ value }) => value?.trim())
   description?: string;
 
-  @IsMongoId()
-  createdBy!: string;
 }
 
 export class UpdateConversationDto {

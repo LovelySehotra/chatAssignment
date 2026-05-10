@@ -11,31 +11,34 @@ export class ConversationService {
         // conversation already exists between these two users
         const existingConversation = await this.conversationRepository.findOne({
             type: 'direct',
-            participants: { $all: participantIds, $size: 2 },
+            participantIds: { $all: participantIds, $size: 2 },
         });
         if (existingConversation) {
             return existingConversation;
         }
         const newConversation = await this.conversationRepository.create({
-            participants: participantIds.map(id => new mongoose.Types.ObjectId(id)),
+            type: 'direct',
+            participantIds: participantIds.map(id => new mongoose.Types.ObjectId(id)),
+            createdBy: new mongoose.Types.ObjectId(participantIds[0]),
             lastMessage: null,
         });
         return newConversation;
 
     }
-    async createGroupConversation( participantIds: string[], name?: string, description?: string): Promise<IConversation> {
+    async createGroupConversation(participantIds: string[], name?: string, description?: string): Promise<IConversation> {
         const newConversation = await this.conversationRepository.create({
             type: 'group',
-            participants: [...participantIds.map(id => new mongoose.Types.ObjectId(id))],
+            participantIds: [...participantIds.map(id => new mongoose.Types.ObjectId(id))],
             name,
             description,
+            createdBy: new mongoose.Types.ObjectId(participantIds[0]),
             lastMessage: null,
         });
         return newConversation;
     }
     async getUserConversations(userId: string): Promise<IConversation[]> {
         return this.conversationRepository.findMany({
-            participants: userId,
+            participantIds: userId,
         })
     }
     async getConversationById(conversationId: string): Promise<IConversation | null> {
