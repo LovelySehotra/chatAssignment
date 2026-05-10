@@ -15,4 +15,5 @@ export const {
     REDIS_HOST,
     REDIS_PORT,
     REDIS_PASSWORD,
+    PRESENCE_TTL
 } = process.env;

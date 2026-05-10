@@ -19,7 +19,7 @@ export class MessageService {
   // Save a new message and update the conversation's last message.
 
   async sendMessage(senderId: string, conversationId: string, content: string): Promise<IMessage> {
-    console.log("before creating message")
+
     // Validate conversation exists
     const conversation = await this.conversationRepository.findById(conversationId);
     if (!conversation) {
@@ -43,20 +43,25 @@ export class MessageService {
       type: 'text',
       readBy: [],
     });
+    if (!message) {
+      throw new AppError('Failed to create message', 500);
+    }
 
     // Update conversation lastMessage
-    await this.conversationRepository.updateById(conversationId, {
+    const conservation = await this.conversationRepository.updateById(conversationId, {
       lastMessage: {
         content: content,
         senderId: new mongoose.Types.ObjectId(senderId),
         sentAt: message.createdAt,
       },
     });
-
+    if (!conservation) {
+      throw new AppError('Failed to update conversation', 500);
+    }
 
     const populatedMessage = await this.messageRepository.findById(message.id, {
       populate: {
-        path: 'sender',
+        path: 'senderId',
         select: '_id username email avatar',
       },
     });
@@ -100,7 +105,7 @@ export class MessageService {
     await message.save();
     return;
   }
-  async getMessagesByConversationId(conversationId: string, userId: string, paginationOptions: { cursor: string, limit: number,  }): Promise<{
+  async getMessagesByConversationId(conversationId: string, userId: string, paginationOptions: { cursor: string, limit: number, }): Promise<{
     data: IMessage[];
     pagination: { nextCursor: string | null; limit: number };
   }> {
@@ -135,7 +140,7 @@ export class MessageService {
       pagination: { limit, nextCursor },
     };
   }
-  async getUnreadMessagesCount(userId: string,conversationId:string): Promise<number> {
+  async getUnreadMessagesCount(userId: string, conversationId: string): Promise<number> {
     const conversation = await this.conversationRepository.findById(conversationId);
     if (!conversation) {
       throw new NotFoundError('Conversation not found');
@@ -152,4 +157,5 @@ export class MessageService {
     });
     return count;
   }
+
 }

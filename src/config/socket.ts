@@ -5,6 +5,7 @@ import { Server as IOServer, Socket } from 'socket.io';
 
 
 import { JwtService } from '@/application/services/Auth/jwt.service';
+import { registerPresenceHandlers } from '@/interface/socket/presence.handler';
 
 let io: IOServer;
 
@@ -43,6 +44,7 @@ export function initSocketIO(httpServer: HttpServer): IOServer {
       `[Socket] connected socketId=${socket.id}`,
     );
     registerMessageHandlers(io, socket);
+    registerPresenceHandlers(io, socket);
 
     socket.on('disconnect', reason => {
       console.log(
