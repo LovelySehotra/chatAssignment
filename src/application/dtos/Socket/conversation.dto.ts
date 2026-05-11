@@ -97,7 +97,7 @@ export class ConversationResponseDto {
   @Transform(({ value }) =>
     value?.map((id: any) => id?.toString?.() ?? id),
   )
-  participants!: string[];
+  participantIds!: string[];
 
   @Expose()
   name?: string;
