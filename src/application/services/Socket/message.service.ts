@@ -1,7 +1,7 @@
 import mongoose, { Types } from 'mongoose';
 import { IMessage, IConversation } from '@/domain/models';
 import { IRepository } from '@/infrastructure';
-import { AppError, NotFoundError, ForbiddenError } from '@/interface/middleware/error/error';
+import { AppError, NotFoundError, ForbiddenError, BadRequestError } from '@/interface/middleware/error/error';
 
 export class MessageService {
   private messageRepository: IRepository<IMessage>;
@@ -19,58 +19,62 @@ export class MessageService {
   // Save a new message and update the conversation's last message.
 
   async sendMessage(senderId: string, conversationId: string, content: string): Promise<IMessage> {
+    return await this.messageRepository.withTransaction(async (session) => {
+      // Validate conversation exists
+      const conversation = await this.conversationRepository.findById(conversationId, { session });
+      if (!conversation) {
+        throw new NotFoundError('Conversation not found');
+      }
 
-    // Validate conversation exists
-    const conversation = await this.conversationRepository.findById(conversationId);
-    if (!conversation) {
-      throw new NotFoundError('Conversation not found');
-    }
+      // Verify sender is participant
+      const isParticipant = conversation.participantIds.some(
+        (p) => p.toString() === senderId
+      );
 
-    // Verify sender is participant
-    const isParticipant = conversation.participantIds.some(
-      (p) => p.toString() === senderId
-    );
+      if (!isParticipant) {
+        throw new ForbiddenError('User is not a participant in this conversation');
+      }
 
-    if (!isParticipant) {
-      throw new ForbiddenError('User is not a participant in this conversation');
-    }
-
-    // Create message
-    const message = await this.messageRepository.create({
-      conversationId: new mongoose.Types.ObjectId(conversationId),
-      senderId: new mongoose.Types.ObjectId(senderId),
-      content,
-      type: 'text',
-      readBy: [],
-    });
-    if (!message) {
-      throw new AppError('Failed to create message', 500);
-    }
-
-    // Update conversation lastMessage
-    const conservation = await this.conversationRepository.updateById(conversationId, {
-      lastMessage: {
-        content: content,
+      // Create message
+      const message = await this.messageRepository.create({
+        conversationId: new mongoose.Types.ObjectId(conversationId),
         senderId: new mongoose.Types.ObjectId(senderId),
-        sentAt: message.createdAt,
-      },
+        content,
+        type: 'text',
+        readBy: [],
+      }, { session });
+
+      if (!message) {
+        throw new AppError('Failed to create message', 500);
+      }
+
+      // Update conversation lastMessage
+      const updatedConversation = await this.conversationRepository.updateById(conversationId, {
+        lastMessage: {
+          content: content,
+          senderId: new mongoose.Types.ObjectId(senderId),
+          sentAt: message.createdAt,
+        },
+      }, { session });
+
+      if (!updatedConversation) {
+        throw new AppError('Failed to update conversation', 500);
+      }
+
+      const populatedMessage = await this.messageRepository.findById(String(message._id), {
+        session,
+        populate: {
+          path: 'senderId',
+          select: '_id username email avatar',
+        },
+      });
+
+      if (!populatedMessage) {
+        throw new AppError('Failed to populate message', 500);
+      }
+
+      return populatedMessage;
     });
-    if (!conservation) {
-      throw new AppError('Failed to update conversation', 500);
-    }
-
-    const populatedMessage = await this.messageRepository.findById(message.id, {
-      populate: {
-        path: 'senderId',
-        select: '_id username email avatar',
-      },
-    });
-
-    if (!populatedMessage) {
-      throw new AppError('Failed to populate message', 500);
-    }
-
-    return populatedMessage;
   }
 
 
@@ -78,66 +82,107 @@ export class MessageService {
 
 
   async markAsRead(conversationId: string, messageId: string, currentUserId: string): Promise<void> {
-    const conversation = await this.conversationRepository.findById(conversationId);
+    await this.messageRepository.withTransaction(async (session) => {
+      const conversation = await this.conversationRepository.findById(conversationId, { session });
+      if (!conversation) {
+        throw new NotFoundError('Conversation not found');
+      }
+
+      // Ensure user is participant
+      const isParticipant = conversation.participantIds.some(
+        (p) => p.toString() === currentUserId
+      );
+      if (!isParticipant) {
+        throw new ForbiddenError('User is not a participant in this conversation');
+      }
+
+      const readAt = new Date();
+      await this.messageRepository.updateOne(
+        {
+          _id: messageId,
+          'readBy.userId': { $ne: new mongoose.Types.ObjectId(currentUserId) }
+        },
+        {
+          $push: { readBy: { userId: new mongoose.Types.ObjectId(currentUserId), readAt } }
+        },
+        { session }
+      );
+    });
+  }
+  async getMessagesByConversationId(
+    conversationId: string,
+    userId: string,
+    paginationOptions: { cursor?: string; limit: number },
+  ): Promise<{
+    data: IMessage[];
+    pagination: { cursor: string | null; limit: number };
+  }> {
+
+    if (!Types.ObjectId.isValid(conversationId)) {
+      throw new BadRequestError('Invalid conversation id');
+    }
+
+    const conversation =
+      await this.conversationRepository.findById(conversationId);
+
     if (!conversation) {
       throw new NotFoundError('Conversation not found');
     }
 
-    // Ensure user is participant
     const isParticipant = conversation.participantIds.some(
-      (p) => p.toString() === currentUserId
+      (p) => p.toString() === userId,
     );
+
     if (!isParticipant) {
-      throw new ForbiddenError('User is not a participant in this conversation');
+      throw new ForbiddenError(
+        'User is not a participant in this conversation',
+      );
     }
-    const message = await this.messageRepository.findById(messageId);
-    if (!message) {
-      throw new NotFoundError('Message not found');
-    }
-    const alreadyRead = message.readBy.some(
-      (r) => r.userId.toString() === currentUserId
-    );
-    if (alreadyRead) {
-      return; // No action needed 
-    }
-    const readAt = new Date();
-    message.readBy.push({ userId: new mongoose.Types.ObjectId(currentUserId), readAt });
-    await message.save();
-    return;
-  }
-  async getMessagesByConversationId(conversationId: string, userId: string, paginationOptions: { cursor: string, limit: number, }): Promise<{
-    data: IMessage[];
-    pagination: { nextCursor: string | null; limit: number };
-  }> {
-    const conversation = await this.conversationRepository.findById(conversationId);
-    if (!conversation) {
-      throw new NotFoundError('Conversation not found');
-    }
-    const isParticipant = conversation.participantIds.some(
-      (p) => p.toString() === userId
-    );
-    if (!isParticipant) {
-      throw new ForbiddenError('User is not a participant in this conversation');
-    }
+
     const limit = Math.min(paginationOptions.limit ?? 20, 50);
-    let query: any = { conversationId };
-    if (paginationOptions.cursor) {
-      query._id = { $lt: new Types.ObjectId(paginationOptions.cursor) };
+
+    const query: any = {
+      conversationId: new Types.ObjectId(conversationId),
+    };
+
+    if (
+      paginationOptions.cursor &&
+      Types.ObjectId.isValid(paginationOptions.cursor)
+    ) {
+      query._id = {
+        $lt: new Types.ObjectId(paginationOptions.cursor),
+      };
     }
-    console.log("Querying messages with:", query, "Limit:", limit);
 
     const messages = await this.messageRepository.findMany(query, {
       sort: { _id: -1 },
       limit: limit + 1,
     });
-    const nextCursor =
-      messages.length > limit
-        ? String(messages[messages.length - 1]._id)
-        : null;
-    if (messages.length > limit) messages.pop();
+
+    if (messages.length === 0) {
+      return {
+        data: [],
+        pagination: {
+          cursor: null,
+          limit,
+        },
+      };
+    }
+
+    const hasNextPage = messages.length > limit;
+
+    if (hasNextPage) {
+      messages.pop();
+    }
+
     return {
       data: messages,
-      pagination: { limit, nextCursor },
+      pagination: {
+        cursor: hasNextPage
+          ? String(messages[messages.length - 1]._id)
+          : null,
+        limit,
+      },
     };
   }
   async getUnreadMessagesCount(userId: string, conversationId: string): Promise<number> {
