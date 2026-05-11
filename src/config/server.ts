@@ -7,6 +7,7 @@ import { initSocketIO } from '@/config';
 import { errorHandler } from '@/interface/middleware/error/error';
 import { userDeserializer } from '@/interface/middleware/auth/userDeserialiser';
 import { corsConfig } from '@/interface/middleware/cors/cors';
+import { connectRedis, disconnectRedis } from './redis';
 export type AppConfig = {
   port?: number | string;
 };
@@ -31,6 +32,7 @@ export class Server {
 
 
     await connectToDatabase();
+    await connectRedis();
 
     // create raw http server
     this.server = http.createServer(this.app);
@@ -59,6 +61,7 @@ export class Server {
 
           try {
             await disconnectFromDatabase();
+            await disconnectRedis();
             console.log('Server shutdown complete');
             resolve();
           } catch (dbError) {

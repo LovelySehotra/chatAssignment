@@ -14,8 +14,7 @@ export function initSocketIO(httpServer: HttpServer): IOServer {
 
   io = new IOServer(httpServer, {
     cors: {
-      origin: '*',
-      methods: ['GET', 'POST'],
+      origin: "*",
     },
     pingTimeout: 60_000,
     pingInterval: 25_000,

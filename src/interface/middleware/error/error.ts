@@ -140,7 +140,7 @@ export const errorHandler = (
     return res.status(500).json({
       success: false,
       status: 'error',
-      message: 'Something went wrong!',
+      message: error.message || 'Something went wrong!',
       error: err,
       stack: err.stack,
     });
@@ -150,7 +150,7 @@ export const errorHandler = (
   return res.status(500).json({
     success: false,
     status: 'error',
-    message: 'Something went wrong!',
+    message: error.message || 'Something went wrong!',
   });
 };
 

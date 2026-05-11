@@ -13,12 +13,11 @@ export class MessageController {
         const { conversationId, content } = req.body;
 
         const message = await this.messageService.sendMessage(String(userId), conversationId, content);
-        console.log('Message sent:', message);
         if (!message) {
             return res.status(500).json({ message: 'Failed to send message' });
         }
         const io = getSocketIO();
-        io.to(conversationId).emit('receive_message', message.toJSON());
+        io.to(conversationId).emit('receive_message', message);
 
         return res.status(201).json(message);
     }
@@ -42,7 +41,7 @@ export class MessageController {
             limit: Number(limit) || 20,
         };
 
-        const result = await this.messageService.getMessagesByConversationId(conversationId, String(userId), paginationOptions);
+        const result = await this.messageService.getMessagesByConversationId(String(conversationId), String(userId), paginationOptions);
 
         return res.status(200).json(result);
     }
@@ -51,7 +50,7 @@ export class MessageController {
         const userId = req.user!._id;
         const { conversationId } = req.params;
 
-        const count = await this.messageService.getUnreadMessagesCount(String(userId), conversationId);
+        const count = await this.messageService.getUnreadMessagesCount(String(userId), String(conversationId));
 
         return res.status(200).json({ unreadCount: count });
     }

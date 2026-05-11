@@ -7,9 +7,9 @@ let redisClient: Redis | null = null;
 export function getRedis(): Redis {
   if (!redisClient) {
     redisClient = new Redis({
-      host: REDIS_HOST,
-      port:Number (REDIS_PORT),
-      password: REDIS_PASSWORD,
+      host: REDIS_HOST || 'localhost',
+      port: Number(REDIS_PORT) || 6379,
+      password: REDIS_PASSWORD || '',
       lazyConnect: true,
       enableReadyCheck: true,
     });

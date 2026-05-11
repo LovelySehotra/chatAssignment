@@ -7,16 +7,28 @@ export class PresenceService {
 
     async setOnlineStatus(userId: string): Promise<void> {
         const redis = getRedis();
-        await redis.set(`${PREFIX}${userId}`, '1', 'EX', PRESENCE_TTL);
+
+        const ttl = Number(PRESENCE_TTL ?? 60);
+
+        await redis.set(
+            `${PREFIX}${userId}`,
+            '1',
+            'EX',
+            ttl,
+        );
     }
 
     async removeOnlineStatus(userId: string): Promise<void> {
         const redis = getRedis();
+
         await redis.del(`${PREFIX}${userId}`);
     }
+
     async isUserOnline(userId: string): Promise<boolean> {
         const redis = getRedis();
+
         const status = await redis.get(`${PREFIX}${userId}`);
+
         return status === '1';
     }
 }
