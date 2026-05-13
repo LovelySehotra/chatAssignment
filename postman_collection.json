@@ -1,0 +1,204 @@
+{
+  "info": {
+    "name": "Chat Assignment API v2",
+    "description": "Updated API collection with Redis Presence and fixed field names (participantIds).\n\n## Setup\n1. Import this collection into Postman\n2. Set the `baseUrl` variable (default: http://localhost:1209)\n3. Run **Signup** or **Login** first — the access token is auto-saved\n4. All protected endpoints use `{{accessToken}}` from collection variables\n\n## Presence Logic\nPresence is tracked via Redis. When a user connects to Socket.IO, they are marked as 'online'. When they disconnect, they are marked 'offline' (if no other active tabs).\nListen for `user_online` and `user_offline` events in your socket client.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:1209" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "conversationId", "value": "" },
+    { "key": "messageId", "value": "" },
+    { "key": "otherUserId", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [ { "key": "token", "value": "{{accessToken}}", "type": "string" } ]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Signup",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', data.accessToken || '');",
+                  "  pm.collectionVariables.set('refreshToken', data.refreshToken || '');",
+                  "  pm.collectionVariables.set('userId', data._id || '');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test_{{$randomInt}}@example.com\",\n  \"password\": \"Test@1234\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/users", "host": ["{{baseUrl}}"], "path": ["api", "users"] },
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', data.accessToken || '');",
+                  "  pm.collectionVariables.set('refreshToken', data.refreshToken || '');",
+                  "  pm.collectionVariables.set('userId', data._id || '');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"Test@1234\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/users/login", "host": ["{{baseUrl}}"], "path": ["api", "users", "login"] },
+            "auth": { "type": "noauth" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/users/me", "host": ["{{baseUrl}}"], "path": ["api", "users", "me"] }
+          }
+        },
+        {
+          "name": "Get All Users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (Array.isArray(data) && data.length > 1) {",
+                  "    const other = data.find(u => u._id !== pm.collectionVariables.get('userId'));",
+                  "    if (other) pm.collectionVariables.set('otherUserId', other._id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/users", "host": ["{{baseUrl}}"], "path": ["api", "users"] }
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PATCH",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"NewName\",\n  \"bio\": \"Updated bio with Redis presence logic active.\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/users", "host": ["{{baseUrl}}"], "path": ["api", "users"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Conversations",
+      "item": [
+        {
+          "name": "Create Direct Conversation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json();",
+                  "  pm.collectionVariables.set('conversationId', data._id || '');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"type\": \"direct\",\n  \"participantIds\": [\"{{otherUserId}}\"]\n}" },
+            "url": { "raw": "{{baseUrl}}/api/conversations/direct", "host": ["{{baseUrl}}"], "path": ["api", "conversations", "direct"] }
+          }
+        },
+        {
+          "name": "Create Group Conversation",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"type\": \"group\",\n  \"participantIds\": [\"{{otherUserId}}\"],\n  \"name\": \"Redis Presence Test Group\",\n  \"description\": \"Testing real-time presence updates.\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/conversations/group", "host": ["{{baseUrl}}"], "path": ["api", "conversations", "group"] }
+          }
+        },
+        {
+          "name": "Get My Conversations",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/conversations", "host": ["{{baseUrl}}"], "path": ["api", "conversations"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Messages",
+      "item": [
+        {
+          "name": "Send Message",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json();",
+                  "  pm.collectionVariables.set('messageId', data._id || '');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"conversationId\": \"{{conversationId}}\",\n  \"content\": \"Testing message with Redis presence active.\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/messages/send", "host": ["{{baseUrl}}"], "path": ["api", "messages", "send"] }
+          }
+        },
+        {
+          "name": "Get Messages By Conversation",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/messages/{{conversationId}}?limit=20", "host": ["{{baseUrl}}"], "path": ["api", "messages", "{{conversationId}}"], "query": [ { "key": "limit", "value": "20" } ] }
+          }
+        }
+      ]
+    }
+  ]
+}
